@@ -65,29 +65,48 @@ public class EsAppTest {
 	
 	@Test
 	public void testIndex() throws IOException {
+		// 判断是否存在索引
 		if (!existsIndex(INDEX_TEST)) {
+			// 不存在则创建索引
 			createIndex(INDEX_TEST);
 		}
+		// 判断是否存在记录
 		if (!exists(INDEX_TEST, TYPE_TEST, tests)) {
+			// 不存在增加记录
 			add(INDEX_TEST, TYPE_TEST, tests);
 		}
+		// 获取记录信息
 		get(INDEX_TEST, TYPE_TEST, tests.getId());
 		
+		// 更新记录信息
 		update(INDEX_TEST, TYPE_TEST, tests);
 		get(INDEX_TEST, TYPE_TEST, tests.getId());
 		
+		// 删除记录信息
 		delete(INDEX_TEST, TYPE_TEST, tests.getId());
 		get(INDEX_TEST, TYPE_TEST, tests.getId());
 		
+		// 批量操作
 		bulk();
 	}
 	
+	/**
+	 * 创建索引
+	 * @param index
+	 * @throws IOException
+	 */
 	public void createIndex(String index) throws IOException {
 		CreateIndexRequest request = new CreateIndexRequest(index);
 		CreateIndexResponse createIndexResponse = client.indices().create(request, RequestOptions.DEFAULT);
 		System.out.println("createIndex: " + JSON.toJSONString(createIndexResponse));
 	}
 
+	/**
+	 * 判断索引是否存在
+	 * @param index
+	 * @return
+	 * @throws IOException
+	 */
 	public boolean existsIndex(String index) throws IOException {
 		GetIndexRequest request = new GetIndexRequest();
 		request.indices(index);
@@ -96,6 +115,13 @@ public class EsAppTest {
 		return exists;
 	}
 
+	/**
+	 * 增加记录
+	 * @param index
+	 * @param type
+	 * @param tests
+	 * @throws IOException
+	 */
 	public void add(String index, String type, Tests tests) throws IOException {
 		IndexRequest indexRequest = new IndexRequest(index, type, tests.getId().toString());
 		indexRequest.source(JSON.toJSONString(tests), XContentType.JSON);
@@ -103,6 +129,14 @@ public class EsAppTest {
 		System.out.println("add: " + JSON.toJSONString(indexResponse));
 	}
 
+	/**
+	 * 判断记录是都存在
+	 * @param index
+	 * @param type
+	 * @param tests
+	 * @return
+	 * @throws IOException
+	 */
 	public boolean exists(String index, String type, Tests tests) throws IOException {
 		GetRequest getRequest = new GetRequest(index, type, tests.getId().toString());
 		getRequest.fetchSourceContext(new FetchSourceContext(false));
@@ -112,12 +146,26 @@ public class EsAppTest {
 		return exists;
 	}
 
+	/**
+	 * 获取记录信息
+	 * @param index
+	 * @param type
+	 * @param id
+	 * @throws IOException
+	 */
 	public void get(String index, String type, Long id) throws IOException {
 		GetRequest getRequest = new GetRequest(index, type, id.toString());
 		GetResponse getResponse = client.get(getRequest, RequestOptions.DEFAULT);
 		System.out.println("get: " + JSON.toJSONString(getResponse));
 	}
 
+	/**
+	 * 更新记录信息
+	 * @param index
+	 * @param type
+	 * @param tests
+	 * @throws IOException
+	 */
 	public void update(String index, String type, Tests tests) throws IOException {
 		tests.setName(tests.getName() + "updated");
 		UpdateRequest request = new UpdateRequest(index, type, tests.getId().toString());
@@ -126,12 +174,26 @@ public class EsAppTest {
 		System.out.println("update: " + JSON.toJSONString(updateResponse));
 	}
 
+	/**
+	 * 删除记录
+	 * @param index
+	 * @param type
+	 * @param id
+	 * @throws IOException
+	 */
 	public void delete(String index, String type, Long id) throws IOException {
 		DeleteRequest deleteRequest = new DeleteRequest(index, type, id.toString());
 		DeleteResponse response = client.delete(deleteRequest, RequestOptions.DEFAULT);
 		System.out.println("delete: " + JSON.toJSONString(response));
 	}
 
+	/**
+	 * 搜索
+	 * @param index
+	 * @param type
+	 * @param name
+	 * @throws IOException
+	 */
 	public void search(String index, String type, String name) throws IOException {
 		BoolQueryBuilder boolBuilder = QueryBuilders.boolQuery();
 		boolBuilder.must(QueryBuilders.matchQuery("name", name));
@@ -139,8 +201,8 @@ public class EsAppTest {
 		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
 		sourceBuilder.query(boolBuilder);
 		sourceBuilder.from(0);
-		sourceBuilder.size(100); // 默认10
-		sourceBuilder.fetchSource(new String[] { "id", "name" }, new String[] {}); // 默认全部
+		sourceBuilder.size(100); // 获取记录数，默认10
+		sourceBuilder.fetchSource(new String[] { "id", "name" }, new String[] {}); // 第一个是获取字段，第二个是过滤的字段，默认获取全部
 		SearchRequest searchRequest = new SearchRequest(index);
 		searchRequest.types(type);
 		searchRequest.source(sourceBuilder);
@@ -153,7 +215,12 @@ public class EsAppTest {
 		}
 	}
 	
+	/**
+	 * 批量操作
+	 * @throws IOException
+	 */
 	public void bulk() throws IOException {
+		// 批量增加
 		BulkRequest bulkAddRequest = new BulkRequest();
 		for (int i = 0; i < testsList.size(); i++) {
 			tests = testsList.get(i);
@@ -165,6 +232,7 @@ public class EsAppTest {
 		System.out.println("bulkAdd: " + JSON.toJSONString(bulkAddResponse));
 		search(INDEX_TEST, TYPE_TEST, "this");
 		
+		// 批量更新
 		BulkRequest bulkUpdateRequest = new BulkRequest();
 		for (int i = 0; i < testsList.size(); i++) {
 			tests = testsList.get(i);
@@ -177,6 +245,7 @@ public class EsAppTest {
 		System.out.println("bulkUpdate: " + JSON.toJSONString(bulkUpdateResponse));
 		search(INDEX_TEST, TYPE_TEST, "updated");
 		
+		// 批量删除
 		BulkRequest bulkDeleteRequest = new BulkRequest();
 		for (int i = 0; i < testsList.size(); i++) {
 			tests = testsList.get(i);
